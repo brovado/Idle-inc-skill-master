@@ -1,1 +1,43 @@
-index
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Skill Master</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#10151a;color:#e8edf0;font:14px system-ui,sans-serif}button{font:inherit;color:inherit;background:#202a31;border:1px solid #3a4750;border-radius:6px;padding:8px 11px;cursor:pointer}button:hover{background:#2b3841}.wrap{max-width:1150px;margin:auto;padding:18px}.top{display:flex;justify-content:space-between;align-items:end;border-bottom:1px solid #303a41;padding-bottom:12px}.title{font-size:28px;font-weight:800}.sub,.muted{color:#91a0a9}.stats{display:flex;gap:12px;flex-wrap:wrap;margin:14px 0}.stat{background:#171e24;border:1px solid #29343b;padding:10px 14px;border-radius:8px;min-width:125px}.stat b{display:block;font-size:18px}.grid{display:grid;grid-template-columns:1.1fr 1fr 1fr;gap:14px}.card{background:#171e24;border:1px solid #29343b;border-radius:9px;padding:14px}.card h2{font-size:16px;margin:0 0 12px}.tabs{display:flex;gap:6px;margin-bottom:10px}.tab.active{background:#354650}.row,.mob,.recipe{display:flex;justify-content:space-between;align-items:center;gap:8px}.row{padding:8px 0;border-bottom:1px solid #252f36}.bar{height:7px;background:#29343b;border-radius:99px;overflow:hidden;margin-top:5px}.fill{height:100%;background:#73b7ff}.mob{padding:9px;border:1px solid #29343b;border-radius:6px;margin:6px 0}.boss{border-color:#855b39}.tag{display:inline-block;padding:2px 6px;border-radius:4px;background:#26333b;margin:2px}.danger{background:#3a2222}.good{color:#8ee0a5}.small,.xp{font-size:12px}.xp{color:#9fc9ff}.recipe{margin:7px 0}.log{height:140px;overflow:auto;background:#11171b;padding:8px;border-radius:6px;color:#aebbc2;font-size:12px}.world{font-size:20px;font-weight:700}@media(max-width:900px){.grid{grid-template-columns:1fr}.stats{display:grid;grid-template-columns:1fr 1fr}}
+</style></head><body><div class="wrap">
+<div class="top"><div><div class="title">SKILL MASTER</div><div class="sub">Gather. Craft. Hunt. Make the numbers go brrrrrr.</div></div><button onclick="resetGame()">Reset</button></div>
+<div class="stats" id="stats"></div>
+<div class="grid"><section class="card"><h2>Skills</h2><div class="tabs" id="tabs"></div><div id="skills"></div></section><section class="card"><h2>Adventure</h2><div id="adventure"></div></section><section class="card"><h2>Workshop</h2><div id="workshop"></div></section></div>
+<div class="card" style="margin-top:14px"><h2>Activity</h2><div class="log" id="log"></div></div></div>
+<script>
+const KEY="skill-master-v0";
+const skillDefs={mining:["Mining","Gathering"],woodcutting:["Woodcutting","Gathering"],herbalism:["Herbalism","Gathering"],fishing:["Fishing","Gathering"],smithing:["Smithing","Production"],alchemy:["Alchemy","Production"],enchanting:["Enchanting","Production"],jewelcrafting:["Jewelcrafting","Production"],combat:["Combat","Combat"]};
+const worlds=[
+{name:"Little Village",scale:"Village Problem",mobs:[["Rat",18,1,2],["Wolf",30,2,3],["Boar",38,2,4],["Bandit",55,3,6],["Forest Spider",70,4,7],["Wild Hound",85,5,8]],boss:["Bandit Chief",240,15,30],mat:["Copper Ore","Pine Log","Green Herb"]},
+{name:"The Local Mine",scale:"Town Problem",mobs:[["Kobold",120,8,14],["Cave Bat",145,9,15],["Goblin Miner",180,10,18],["Cave Spider",220,12,20],["Stone Brute",280,15,24],["Goblin Guard",340,18,28],["Mine Warden",420,22,34]],boss:["Kobold Foreman",1100,90,140],mat:["Iron Ore","Oak Log","Silverleaf"]},
+{name:"Road to the City",scale:"Regional Problem",mobs:[["Ogre",600,40,60],["Troll",720,45,70],["Dark Ranger",900,55,85],["Warg",1050,60,95],["Cultist",1300,70,110],["Stone Troll",1600,85,130]],boss:["Road Tyrant",4800,420,650],mat:["Steel Ore","Hardwood","Moonleaf"]}
+];
+const recipes=[
+["Copper Sword",{ore:8},"smithing",8],["Iron Blade",{ore:18},"smithing",28],["Steel Edge",{ore:35},"smithing",70],
+["Leather Tonic",{herb:6},"alchemy",12],["Mighty Elixir",{herb:18},"alchemy",40],
+["Simple Enchant",{ore:4,herb:4},"enchanting",18],["Ruby Setting",{ore:12},"jewelcrafting",35]];
+let G=load()||{gold:0,world:0,enemy:0,hp:18,boss:false,res:{ore:12,wood:12,herb:12},gear:0,potion:0,enchant:0,gem:0,skills:{},kills:{},last:Date.now(),log:[]};
+Object.keys(skillDefs).forEach(k=>G.skills[k]??={level:1,xp:0});
+function load(){try{return JSON.parse(localStorage.getItem(KEY))}catch(e){return null}}
+function save(){G.last=Date.now();localStorage.setItem(KEY,JSON.stringify(G))}
+function fmt(n){if(n<1000)return Math.floor(n);if(n<1e6)return(n/1e3).toFixed(1)+"k";if(n<1e9)return(n/1e6).toFixed(1)+"m";return(n/1e9).toFixed(1)+"b"}
+function need(l){return Math.floor(20*Math.pow(l,1.55))}
+function power(){return Math.max(1,Math.floor(2+G.gear*2+G.skills.combat.level*1.7+G.enchant*3+G.gem*2))}
+function sp(k){return 1+G.skills[k].level*.08}
+function xp(k,n){let s=G.skills[k];s.xp+=n;while(s.xp>=need(s.level)){s.xp-=need(s.level);s.level++;log(skillDefs[k][0]+" reached level "+s.level+"!")}}
+function log(s){G.log.unshift(new Date().toLocaleTimeString()+" — "+s);G.log=G.log.slice(0,80)}
+function fight(){let w=worlds[G.world],t=G.boss?w.boss:w.mobs[G.enemy];G.hp-=power();if(G.hp>0)return;let n=t[0];G.gold+=t[3];G.kills[n]=(G.kills[n]||0)+1;xp("combat",t[2]);if(!G.boss){G.res.ore+=Math.floor(Math.random()*2);G.res.herb++;log("Defeated "+n+" ×"+fmt(G.kills[n])+" · +"+t[3]+" gold");G.enemy++;if(G.enemy>=w.mobs.length){G.boss=true;G.hp=w.boss[1];log("BOSS UNLOCKED: "+w.boss[0])}else G.hp=w.mobs[G.enemy][1]}else{log("BOSS DEFEATED: "+n+"!");if(G.world<worlds.length-1){G.world++;G.enemy=0;G.boss=false;G.hp=worlds[G.world].mobs[0][1];log("Entered "+worlds[G.world].name+" — "+worlds[G.world].scale)}else{G.hp=w.boss[1];log("Current frontier conquered. Keep grinding.")}}}
+function craft(i){let r=recipes[i];if(!Object.keys(r[1]).every(k=>G.res[k]>=r[1][k]))return;Object.entries(r[1]).forEach(([k,v])=>G.res[k]-=v);xp(r[2],5);if(r[2]=="smithing")G.gear+=r[3];if(r[2]=="alchemy")G.potion+=r[3];if(r[2]=="enchanting")G.enchant+=r[3]/10;if(r[2]=="jewelcrafting")G.gem+=r[3]/10;log("Crafted "+r[0]);save();render()}
+function group(g){window.sg=g;document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("active",x.dataset.g==g));document.getElementById("skills").innerHTML=Object.entries(skillDefs).filter(x=>x[1][1]==g).map(([k,v])=>{let s=G.skills[k],n=need(s.level);return '<div class="row"><div><b>'+v[0]+'</b><div class="xp">Lv '+s.level+' · '+fmt(s.xp)+' / '+fmt(n)+' XP</div><div class="bar"><div class="fill" style="width:'+100*s.xp/n+'%"></div></div></div><span class="tag">+'+Math.round((sp(k)-1)*100)+'%</span></div>'}).join("")}
+function render(){let w=worlds[G.world],t=G.boss?w.boss:w.mobs[G.enemy];document.getElementById("stats").innerHTML=[["Gold",fmt(G.gold)],["Combat Power",fmt(power())],["Ore",fmt(G.res.ore)],["Wood",fmt(G.res.wood)],["Herbs",fmt(G.res.herb)]].map(x=>'<div class="stat"><span class="muted">'+x[0]+'</span><b>'+x[1]+'</b></div>').join("");
+let gs=["Gathering","Production","Combat"];document.getElementById("tabs").innerHTML=gs.map(g=>'<button class="tab" data-g="'+g+'" onclick="group(\''+g+'\')">'+g+'</button>').join("");group(window.sg||"Gathering");
+document.getElementById("adventure").innerHTML='<div class="world">'+w.name+'</div><div class="muted">'+w.scale+'</div><div style="margin:12px 0">'+(G.boss?'<span class="tag danger">BOSS</span>':'Mob '+(G.enemy+1)+' / '+w.mobs.length)+'</div><div class="mob '+(G.boss?"boss":"")+'"><b>'+t[0]+'</b><span>'+fmt(Math.max(0,G.hp))+' HP</span></div><div class="bar"><div class="fill" style="width:'+Math.max(0,100*G.hp/t[1])+'%"></div></div><p class="small muted">Kills: '+fmt(G.kills[t[0]]||0)+'</p><p><b>Materials:</b><br>'+w.mat.join(" · ")+'</p><p class="good">Auto-fighting. One monster at a time. Boss ends the area.</p>';
+document.getElementById("workshop").innerHTML=recipes.map((r,i)=>{let ok=Object.keys(r[1]).every(k=>G.res[k]>=r[1][k]);let cost=Object.entries(r[1]).map(([k,v])=>v+" "+k).join(" · ");return '<div class="recipe"><span><b>'+r[0]+'</b><br><span class="small muted">'+cost+'</span></span><button '+(!ok?"disabled":"")+' onclick="craft('+i+')">Craft</button></div>'}).join("");
+document.getElementById("log").innerHTML=G.log.map(x=>"<div>"+x+"</div>").join("")}
+function resetGame(){if(confirm("Reset all progress?")){localStorage.removeItem(KEY);location.reload()}}
+function tick(){let now=Date.now(),dt=Math.min(10,(now-G.last)/1000);G.last=now;G.res.ore+=.18*sp("mining")*dt;G.res.wood+=.18*sp("woodcutting")*dt;G.res.herb+=.18*sp("herbalism")*dt;xp("mining",.7*dt);xp("woodcutting",.7*dt);xp("herbalism",.7*dt);for(let i=0;i<Math.max(1,Math.floor(dt*2));i++)fight();if(Math.random()<dt*.12)xp("fishing",1);save();render()}
+render();setInterval(tick,1000);
+</script></body></html>
