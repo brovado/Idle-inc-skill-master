@@ -5,7 +5,7 @@ function save(){localStorage.setItem(K,JSON.stringify(G))}
 function need(l){return Math.floor(25*Math.pow(l,1.55))}
 function fmt(n){if(n<1000)return Math.floor(n);if(n<1e6)return(n/1e3).toFixed(1)+'k';if(n<1e9)return(n/1e6).toFixed(1)+'m';return(n/1e9).toFixed(1)+'b'}
 function log(s){G.log.unshift(new Date().toLocaleTimeString()+' — '+s);G.log=G.log.slice(0,60)}
-function xp(k,n){let s=G.skills[k];s.xp+=n;while(s.xp>=need(s.level)){s.xp-=need(s.level);s.level++;log(k+' reached level '+s.level+'!')}}
+function xp(k,n){let s=G.skills[k];s.xp+=n;while(s.xp>=need(s.level)){s.xp-=need(s.level);s.level++;if(k==='Combat'){G.player.level=s.level;G.player.maxHp=100+(s.level-1)*15;G.player.hp=Math.min(G.player.hp,G.player.maxHp);G.player.attack=8+(s.level-1)*2;G.player.defense=2+Math.floor((s.level-1)/2)}log(k+' reached level '+s.level+'!')}}
 function combatPower(){return Math.max(1,Math.floor(G.player.attack+G.player.defense+G.skills.Combat.level*2))}
 function enemyDamage(t){return Math.max(1,Math.ceil(t[1]*1.15-G.player.defense))}
 function actionDuration(){if(!G.task)return 0;if(G.task.type==='fight'){let t=target();return Math.max(3,2+t[1]*.35)}return skillDurations[G.task.name]||5}
@@ -31,7 +31,7 @@ function tick(){
  if(elapsed>=duration){
    G.progress=0;
    if(G.task.type==='fight'){
-     let t=target();G.kills[t[0]]=(G.kills[t[0]]||0)+1;G.gold+=t[3];xp('Combat',t[1]);if(!G.task.boss)G.materials.Copper++;log('Defeated '+t[0]+' ×'+fmt(G.kills[t[0]])+' · +'+t[3]+' gold');G.player.hp=Math.min(G.player.maxHp,G.player.hp+Math.ceil(G.player.maxHp*.03));G.task=null;log('Choose your next activity.')
+     let t=target();G.kills[t[0]]=(G.kills[t[0]]||0)+1;G.gold+=t[3];xp('Combat',t[1]);if(!G.task.boss)G.materials.Copper++;log('Defeated '+t[0]+' ×'+fmt(G.kills[t[0]])+' · +'+t[3]+' gold');G.task.startedAt=Date.now();G.task.lastHit=0;G.progress=0
    }else{
      xp(G.task.name,.7);if(G.task.name==='Mining')G.materials.Copper+=.35;if(G.task.name==='Woodcutting')G.materials.Pine+=.3;if(G.task.name==='Herbalism')G.materials.Herb+=.3;log(G.task.name+' completed a '+duration+'s work cycle.');G.task.startedAt=Date.now();G.task.lastHit=0
    }
